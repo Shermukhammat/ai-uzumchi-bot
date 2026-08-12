@@ -5,14 +5,38 @@
 A Telegram bot for grape growers ("uzumchi"). A user sends a photo of a
 grape leaf and the bot:
 
-1. Predicts whether the leaf is **diseased or healthy**.
-2. If diseased, predicts the **disease type**.
-3. Predicts the **grape vine (variety) type** from the image.
-4. Lets the user **chat with an LLM** — by text or voice — about the
-   diagnosis: what's wrong, why it happens, and how to treat/fix it.
+1. Predicts the **grape vine (variety) type** from the image.
+2. Gives **detailed information about that variety and its yield**.
+3. Predicts whether the leaf is **diseased or healthy**.
+4. If diseased, gives **detailed information about the disease** and
+   **how to treat it**.
+5. If healthy, tells the user the leaf looks healthy.
+6. Gives **additional info** — agrotechnics, harvest timing, spraying
+   schedule, etc. — relevant to the detected variety/disease.
+7. Lets the user **chat with an LLM** — by text or voice — for follow-up
+   questions about any of the above.
 
 This is currently the **MVP stage**. There is no paid/"Pro" tier — every
 feature below is free while we validate the product and collect data.
+
+### Client request vs. MVP simplification
+
+The client's original ask (see product brief) was for every one of the
+above — variety, disease, treatment, and agrotechnics info — to come
+with **reference photos** (variety photos, disease photos, medicine/
+treatment photos). Maintaining a curated, correctly-licensed image
+library per variety/disease/treatment is a heavy lift for an MVP (sourcing,
+tagging, storage, keeping it in sync as labels change) and isn't
+something the classifier or dataset work gets us for free.
+
+For MVP, we're dropping the *curated reference image* requirement and
+instead having the **LLM (Gemini) generate the informational text**
+(variety description, disease description, treatment steps, agrotech
+notes) on demand, grounded in the classifier's output. No image
+galleries to source or maintain — text-only responses from the LLM step.
+If reference photos turn out to matter to users after launch, that's a
+post-MVP addition (e.g. a small hand-picked image set per label), not a
+blocker now.
 
 ## Why
 
@@ -27,17 +51,23 @@ model versions.
 
 | # | Feature | Input | Output |
 |---|---------|-------|--------|
-| 1 | Disease detection | Leaf photo | Healthy / Diseased |
-| 2 | Disease classification | Leaf photo | Disease name (when diseased) |
-| 3 | Vine type prediction | Leaf photo | Grape variety guess |
-| 4 | Diagnosis chat (text) | Free-text question, with the diagnosis as context | LLM answer: cause, treatment, prevention |
-| 5 | Diagnosis chat (voice) | Voice message | Speech-to-text → LLM → text-to-speech reply (and/or text) |
-| 6 | Dataset collection | Every submitted image | Stored (image + predictions + optional user feedback/correction) for future training |
+| 1 | Vine type prediction | Leaf photo | Grape variety guess |
+| 2 | Variety info | Predicted variety | LLM-generated text: description + yield info (no reference images) |
+| 3 | Disease detection | Leaf photo | Healthy / Diseased |
+| 4 | Disease classification | Leaf photo | Disease name (when diseased) |
+| 5 | Disease + treatment info | Predicted disease | LLM-generated text: cause, treatment steps, prevention (no reference images) |
+| 6 | Agrotech info | Predicted variety/disease | LLM-generated text: agrotechnics, harvest timing, spraying schedule |
+| 7 | Diagnosis chat (text) | Free-text question, with the diagnosis as context | LLM answer: cause, treatment, prevention |
+| 8 | Diagnosis chat (voice) | Voice message | Speech-to-text → LLM → text-to-speech reply (and/or text) |
+| 9 | Dataset collection | Every submitted image | Stored (image + predictions + optional user feedback/correction) for future training |
 
 Explicitly **out of scope for MVP**:
 - Payments / subscription / "Pro" plan.
 - Multi-model ensembles or model retraining pipeline automation.
 - Anything beyond the single-image, single-turn-diagnosis-then-chat flow.
+- Curated reference photo galleries (variety photos, disease photos,
+  treatment/medicine photos) — replaced by LLM-generated text for MVP,
+  see above.
 
 ## Rough flow
 
@@ -51,7 +81,11 @@ Save image (+ metadata) ──► dataset store
 Run classifier(s): disease? disease type? vine type?
       │
       ▼
-Bot replies with prediction summary + confidence
+Prediction(s) → LLM (Gemini): generate variety info, disease + treatment
+info, agrotech notes — text only, no reference images
+      │
+      ▼
+Bot replies with prediction summary + confidence + LLM-generated info
       │
       ▼
 User asks follow-up (text or voice)
@@ -87,9 +121,15 @@ To build the above we expect to add, without restructuring what exists:
   choice/training is a separate track — start with whatever off-the-shelf
   or lightly fine-tuned model gets a v1 shipped, since accuracy improves
   once real user data is collected.
-- **LLM layer** — a `utils/llm.py`-style wrapper that takes the
-  prediction result + conversation history and returns an answer. Keep
-  the prompt/context construction here, not inline in handlers.
+- **LLM layer** — a `utils/llm.py`-style wrapper around the Gemini API
+  that takes the prediction result (variety, disease, healthy/diseased)
+  and returns generated text: variety + yield info, disease + treatment
+  info, and agrotech notes, plus conversation-history-aware answers for
+  follow-up chat. One wrapper, two call shapes: an initial
+  "generate info for this prediction" call right after classification,
+  and a "continue the conversation" call for follow-ups. Keep all
+  prompt/context construction here, not inline in handlers. No reference
+  images are sourced or attached — everything here is generated text.
 - **Voice** — speech-to-text on incoming voice messages, text-to-speech
   on outgoing LLM replies when the user is talking by voice. Keep both
   behind small helper functions so the LLM layer doesn't need to know
@@ -104,8 +144,13 @@ To build the above we expect to add, without restructuring what exists:
 
 - Which model(s) for disease + vine-type classification, and where do
   they run (in-process vs. a separate inference service)?
-- Which LLM provider, and does it need to support voice output natively
-  or do we handle TTS/STT separately?
+- Gemini is the working assumption for the LLM layer (text generation +
+  chat) — confirm which Gemini model/tier, and whether it also handles
+  voice natively or we still need separate TTS/STT.
+- How do we keep LLM-generated variety/disease/treatment info accurate
+  (hallucination risk) — fixed prompt templates per label with strong
+  grounding instructions? Spot-check some outputs before shipping labels
+  live.
 - Where do collected images live (disk vs. object storage/S3-compatible)
   and what's the retention/consent story for user photos?
 - How is "disease type" taxonomy defined initially (fixed label set vs.
