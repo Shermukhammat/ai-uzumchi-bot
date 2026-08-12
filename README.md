@@ -1,17 +1,15 @@
-# Aiogram Bot Template 🚀
+# AI Uzumchi Bot 🍇
 
-A professional and ready-to-use template for quickly developing Telegram bots using `aiogram 3.x` and `SQLAlchemy`. 
+A Telegram bot for grape growers ("uzumchi"). Users send a photo of a
+grape leaf and the bot predicts whether it's diseased (and which
+disease), predicts the vine variety, and lets the user chat with an LLM
+(by text or voice) about the diagnosis and how to treat it.
 
-This template is designed to save you time by providing pre-built foundational features so you don't have to build a database or write standard bot features from scratch. It's fully open-source and perfect for building scalable, database-driven Telegram bots out of the box.
-
-## ✨ Features Included
-
-- **Database Architecture Pre-configured:** Built with `SQLAlchemy 2.0` (async) and `asyncpg` (PostgreSQL), along with `Alembic` for migrations.
-- **Admin Panel:** A dedicated admin interface to manage the bot directly from Telegram.
-- **Ads / Broadcasting System:** Built-in tools for admins to send broadcast messages and advertisements to all users.
-- **Mandatory Channel Subscription:** Force users to subscribe to specific channels/groups before they can use the bot.
-- **Bot Statistics:** Live statistics for admins showing total users, new joins, and active users (filtered by today, this week, and this month).
-- **Middleware Integration:** Ready-to-use middlewares for session handling and user tracking (automatically tracking users' `last_used_at` fields).
+This is currently an **MVP** — see [`docs/PLAN.md`](docs/PLAN.md) for the
+full product plan and what's built vs. still to come. The underlying
+bot infrastructure (admin panel, database layer, channel-subscription
+gate, broadcast system, activity tracking) is already in place; see
+[`CLAUDE.md`](CLAUDE.md) for the technical architecture.
 
 ## 🛠 Tech Stack
 
@@ -21,20 +19,19 @@ This template is designed to save you time by providing pre-built foundational f
 - **Migrations:** `alembic`
 - **Language:** Python 3.11+
 
-## 🚀 Quick Start
+## 🚀 Running the project
 
 ### 1. Clone the repository
 ```bash
 git clone <your-repository-url>
-cd aiogram-bot-template
+cd ai-uzumchi-bot
 ```
 
-### 2. Set up the virtual environment
-We recommend using `.venv` for this project.
-```powershell
+### 2. Set up a virtual environment
+```bash
 python -m venv .venv
-.\.venv\Scripts\activate  # Windows (PowerShell)
-# source .venv/bin/activate  # Linux/macOS
+source .venv/bin/activate      # Linux/macOS
+# .\.venv\Scripts\activate     # Windows (PowerShell)
 ```
 
 ### 3. Install dependencies
@@ -42,36 +39,44 @@ python -m venv .venv
 pip install -r requairments.txt
 ```
 
-### 4. Configure Environment Variables
-Copy `.env.example` to `.env` (or create a `.env` file) in the root directory and add your bot token and database credentials:
-```env
-BOT_TOKEN=your_bot_token_here
-DB_URL=postgresql+asyncpg://user:password@localhost:5432/your_db_name
-```
-
-### 5. Run Database Migrations
-Generate and apply the initial database schemas:
+### 4. Configure environment variables
+Copy `.env.example` to `.env` and fill in the values:
 ```bash
-alembic revision --autogenerate -m "init"
+cp .env.example .env
+```
+```env
+BOT_TOKEN=your_bot_token_here          # from @BotFather
+DB_URL=postgresql+asyncpg://user:password@localhost:5432/ai_uzumchi_bot
+DEV_ID=your_telegram_user_id           # numeric, used by developer-only handlers
+DEBUG=                                 # "1" to enable, otherwise leave empty
+```
+You'll need a running PostgreSQL instance reachable at `DB_URL`.
+
+### 5. Run database migrations
+```bash
 alembic upgrade head
 ```
+(If you've changed models and need a new migration:
+`alembic revision --autogenerate -m "description"`.)
 
-### 6. Start the Bot
+### 6. Start the bot
 ```bash
 python app.py
 ```
 
 ## 📁 Project Structure Overview
 
-- `app.py`: Main entry point to run the bot.
-- `loader.py`: Initializes global singletons (`bot`, `dp`, `db`).
-- `config.py`: Environment variables loader.
-- `db/`: Database core, models, repositories, and Alembic migrations.
-- `handlers/`: Route handlers grouped by features (e.g., `admin`, `register`).
-- `middlewares/`: Middleware components for injecting database sessions and user validation.
-
-## 🤝 Contributing
-Contributions, issues, and feature requests are always welcome! Feel free to fork the repository and submit your pull requests.
+- `app.py` — Main entry point to run the bot.
+- `loader.py` — Initializes global singletons (`bot`, `dp`, `db`).
+- `config.py` — Environment variable loader.
+- `db/` — Database core, models, repositories, and Alembic migrations.
+- `handlers/` — Route handlers grouped by feature (`register`, `admin`,
+  `dev`, `channels`).
+- `middlewares/` — Session injection, user lookup/registration, activity
+  tracking, mandatory-channel-subscription gate.
+- `buttons/` — Inline/reply keyboard builders.
+- `utils/` — Shared helpers (broadcast sending, bot command menus, etc.).
+- `docs/` — Product plan and other project docs.
 
 ## 📝 License
-This project is open-source. Feel free to use and modify it for your own projects!
+This project is open-source. Feel free to use and modify it for your own projects.
