@@ -5,16 +5,24 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from db import DataBase
 from db.models.user import User
 from loader import bot
+from utils.messages import build_welcome_text
 
 
-async def register_user(session: AsyncSession, tg_user: TelegramUser, db: DataBase) -> User:
+def _is_start_command(event: TelegramObject) -> bool:
+    message = getattr(event, "message", None)
+    text = getattr(message, "text", None) if message else None
+    return bool(text) and text.split()[0] == "/start"
+
+
+async def register_user(session: AsyncSession, tg_user: TelegramUser, db: DataBase, event: TelegramObject) -> User:
     """
-    Create and persist a new User row, then send a welcome message.
+    Create and persist a new User row, then greet them.
 
-    Intentionally kept simple — easy to expand later:
-      - Set an FSM state for a multi-step registration form.
-      - Send a richer onboarding message or show a reply keyboard.
-      - Grant default roles / permissions.
+    The /start command is the one case where we skip the greeting here —
+    its own handler sends the identical welcome text right after, and we
+    don't want it twice. For every other kind of first contact (random
+    text, a photo, ...) this is the only place the welcome message gets
+    sent, since the triggering handler won't know the user is brand new.
     """
     user = await db.users.create(
         session,
@@ -23,10 +31,9 @@ async def register_user(session: AsyncSession, tg_user: TelegramUser, db: DataBa
         username=tg_user.username,
         last_name=tg_user.last_name,
     )
-    await bot.send_message(
-        tg_user.id,
-        f"👋 Welcome, {tg_user.first_name}! You have been registered.",
-    )
+    if not _is_start_command(event):
+        await bot.send_message(tg_user.id, build_welcome_text(tg_user.first_name, db.bot.full_name))
+    return user
 
 
 class UserMiddleware(BaseMiddleware):
@@ -61,8 +68,9 @@ class UserMiddleware(BaseMiddleware):
         if tg_user is not None:
             session: AsyncSession = data["session"]
             user = await self.db.users.get(session, tg_user.id)
+            data["is_new_user"] = user is None
             if user is None:
-                return await register_user(session, tg_user, self.db)
+                user = await register_user(session, tg_user, self.db, event)
             data["user"] = user
 
         return await handler(event, data)
