@@ -5,6 +5,7 @@ from aiogram.types import BotCommand, BotCommandScopeChat, BotCommandScopeAllPri
 ADMIN_COMMANDS = [
     BotCommand(command='admin', description="👨🏻‍💻 Admin panel"),
     BotCommand(command='stats', description="📊 Bot statistikasi"),
+    BotCommand(command='ovoz', description="🔊 Ovozli xabar yuborishni yoqish/o'chirish"),
     ]
 
 async def set_admin_commands(user_id: int, bot: Bot):

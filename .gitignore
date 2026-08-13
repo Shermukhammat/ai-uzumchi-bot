@@ -220,3 +220,10 @@ __marimo__/
 # custom ignore files
 .antigravitycli
 pyrefly.toml
+
+# ML datasets / model checkpoints (large, not source-controlled)
+research/*.zip
+research/dataset_raw/
+research/datasets/
+research/*.pt
+research/*.pth
