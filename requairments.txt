@@ -4,3 +4,9 @@ python-dotenv==1.2.2
 asyncpg==0.31.0
 alembic==1.18.4
 aiocache==0.12.2
+
+# Grape leaf classifier inference (see ml/classifier.py) — CPU-only build.
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.13.0+cpu
+torchvision==0.28.0+cpu
+Pillow==12.3.0
