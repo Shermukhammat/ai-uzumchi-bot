@@ -6,6 +6,7 @@ ADMIN_COMMANDS = [
     BotCommand(command='admin', description="👨🏻‍💻 Admin panel"),
     BotCommand(command='stats', description="📊 Bot statistikasi"),
     BotCommand(command='ovoz', description="🔊 Ovozli xabar yuborishni yoqish/o'chirish"),
+    BotCommand(command='yordam', description="🆘 Yordam"),
     ]
 
 async def set_admin_commands(user_id: int, bot: Bot):
@@ -15,6 +16,7 @@ async def set_admin_commands(user_id: int, bot: Bot):
 USER_COMMANDS = [
     BotCommand(command='start', description="🍇 Botni qayta ishga tushirish"),
     BotCommand(command='ovoz', description="🔊 Ovozli xabar yuborishni yoqish/o'chirish"),
+    BotCommand(command='yordam', description="🆘 Yordam"),
 ]
 
 async def set_user_commands(user_id: int, bot: Bot):

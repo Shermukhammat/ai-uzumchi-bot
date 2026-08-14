@@ -2,7 +2,7 @@ from aiogram import types
 from aiogram.filters import Command
 from db.models import User
 from db import DataBase
-from utils.messages import build_welcome_text
+from utils.messages import build_welcome_text, HELP_TEXT
 from . import r
 
 
@@ -18,3 +18,8 @@ async def toggle_voice_handler(message: types.Message, session, user: User, db: 
 
     status = "yoqilgan ✅" if user.voice_replies_enabled else "o'chirilgan ❌"
     await message.answer(f"🔊 Ovozli xabar yuborish {status}")
+
+
+@r.message(Command("yordam"))
+async def help_handler(message: types.Message):
+    await message.answer(HELP_TEXT, parse_mode="HTML")
